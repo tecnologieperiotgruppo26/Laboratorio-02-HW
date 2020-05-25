@@ -24,6 +24,16 @@ const int fanPin = 10;
 float currentSpeed = 0;
 float ledPower = 0;
 
+const int pirPin = 7;
+const unsigned long timeoutPir = 1800000;         /*timeout pir, circa 30 minuto 1800 secondi*/
+volatile unsigned long checkTimePir = 0;
+int flag = 0;
+
+const int soundPin = 3;
+const unsigned long soundInterval = 600000;      /*10 minuti in millis*/
+const unsigned long timeoutSound = 2400000;      /*40 minuti timeout*/
+volatile unsigned long checkTimeSound = 0;
+int countSoundEvent = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -31,6 +41,13 @@ void setup() {
   pinMode(fanPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   analogWrite(fanPin, currentSpeed);
+
+  pinMode(pirPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(pirPin), checkPresence, CHANGE);
+
+  pinMode(soundPin, OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(soundPin), checkSound, FALLING);
+  
   while (!Serial);
   /* se non apri il monitor seriale, il programma non parte */
   Serial.println("Lab 2 Starting");
@@ -61,7 +78,24 @@ void loop() {
     ledPower = 0;
     analogWrite(ledPin, ledPower);
   }
-    
+
+  unsigned long currentMillis = millis();
+  
+  if (currentMillis - checkTimePir >= timeoutPir) {
+    flag = 0;
+  }
+  
+  if (currentMillis - checkTimeSound >= soundInterval ){
+    if (countSoundEvent > 50){
+      /*c'è una persona!*/
+      flag = 1;
+    }
+    else if (currentMillis - checkTimeSound >= timeoutSound){
+      flag = 0;
+    }
+    countSoundEvent = 0;
+  }
+  
   delay(sleepTime);
   
 }
@@ -77,6 +111,23 @@ int checkTemp(){
   float TK = 1.0/((loga)+(1.0/298.15));
   float TC = TK-273.15;
   return TC;
+}
+
+void checkPresence(){
+  if (digitalRead(pirPin)==HIGH){
+    flag = 1;
+    checkTimePir = millis();
+    Serial.print("movimento rilevato!");
+  }
+  else if(digitalRead(pirPin)==LOW){
+  }
+}
+
+void checkSound(){
+  if (countSoundEvent == 0){
+    checkTimeSound = millis();
+  }
+  countSoundEvent++;
 }
 
 
