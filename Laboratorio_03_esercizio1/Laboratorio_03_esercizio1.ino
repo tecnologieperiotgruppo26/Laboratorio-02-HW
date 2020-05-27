@@ -37,12 +37,12 @@ const int beta = 4275;
 const int sleepTime = 10000;
 
 const int fanPin = 10;
-/*valore current speed da 0 a 255*/
+/* Valore corrente speed da 0 a 255 */
 float currentSpeed = 0;
 float ledPower = 0;
 
 const int pirPin = 7;
-const unsigned long timeoutPir = 1800000;         /*timeout pir, circa 30 minuto 1800 secondi*/
+const unsigned long timeoutPir = 1800000;         /* timeout pir, circa 30 minuto 1800 secondi */
 volatile unsigned long checkTimePir = 0;
 unsigned long currentMillis;
 
@@ -52,8 +52,8 @@ unsigned long currentMillis;
 int flag = 0;
 
 const int soundPin = 3;
-const unsigned long soundInterval = 600000;      /*10 minuti in millis*/
-const unsigned long timeoutSound = 2400000;      /*40 minuti timeout*/
+const unsigned long soundInterval = 600000;      /* 10 minuti in millis */
+const unsigned long timeoutSound = 2400000;      /* 40 minuti timeout */
 volatile unsigned long checkTimeSound = 0;
 int countSoundEvent = 0;
 
@@ -63,7 +63,7 @@ LiquidCrystal_PCF8574 lcd(0x27);
 
 
 void setup() {
-  // put your setup code here, to run once:
+  /* Primo setup dei componenti */
   pinMode(tempPin, INPUT);
   pinMode(fanPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
@@ -80,14 +80,12 @@ void setup() {
   lcd.clear();
   
   while (!Serial);
-  /* se non apri il monitor seriale, il programma non parte */
-  Serial.println("Lab 2 Starting");
+  /* E' necessario aprire il monitor altrimenti il programma non parte */
   Serial.begin(9600);
+  Serial.println("Lab 2 Starting");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
   if (flag==0){   
     tempFanMin = tempFanMinNoPeople;
     tempFanMax = tempFanMaxNoPeople;
@@ -103,7 +101,7 @@ void loop() {
 
   temp = checkTemp();
   /**
-   * controllo fan
+   * Controllo ventilatore
    */
   if (temp < tempFanMax && temp > tempFanMin){
     currentSpeed = (temp-tempFanMin)*20.0/100*255.0;
@@ -146,6 +144,7 @@ void loop() {
     countSoundEvent = 0;
   }
 
+
   /**
    * al posto della delay uitilizzo un ciclo while 
    * in cui attento il passare del tempo e checko la presenza di suoni
@@ -185,11 +184,11 @@ float checkTemp(){
 
 
 /**
- * forse sarebbe meglio mettere come interrupt il sensore di
+ * Forse sarebbe meglio mettere come interrupt il sensore di
  * rumore, avendo a disposizione questi sensori si portrebbe 
  * diminuire la sensibilità del sensore di prossimità così che
  * ogni ciclo del loop principale possa catturare comunque le 
- * variazioni del sensore. mentre quello di rumore (più semplice
+ * variazioni del sensore, mentre quello di rumore (più semplice
  * e basilare, e soprattutto solo digitale) si potrebbe impostare
  * sull'interrupt
  */
@@ -215,7 +214,7 @@ void checkSound(){
 
 void lookLCD(){
   /**
-   * in base al setup corrente faccio la print della schermata 
+   * In base al setup corrente faccio la print della schermata 
    */
   if (setupLCD == 0){
     lcd.setCursor(0, 0);
@@ -246,7 +245,7 @@ void lookLCD(){
 }
 
 /**
- * dalla read devo leggere 8 valori, in sequenza saranno
+ * Dalla read devo leggere 8 valori, in sequenza saranno
   int tempFanMinNoPeople = 25;
   int tempFanMaxNoPeople = 30;
   int tempLedMinNoPeople = 20;
@@ -260,8 +259,14 @@ void lookLCD(){
  */
 void listenSerial(){
   char data[46];
-  data = Serial.read();  //in teoria dovrebbero essere comunque 40 char, ma gli do qualche spazio in più per sicurezza
-  sscanf(data, "%f/%f/%f/%f/%f/%f/%f/%f", &tempFanMinNoPeople, &tempFanMaxNoPeople, &tempLedMinNoPeople, &tempLedMaxNoPeople, &tempFanMinWithPeople, &tempFanMaxWithPeople, &tempLedMinWithPeople, &tempLedMaxWithPeople);
+
+  if (Serial.available() > 0) {
+    int i, timeout = 60000; 
+    char* data;
+    Serial.setTimeout(timeout); /* Timeout riferito alla lettura dell'input settato a 1 minuto per permettere all'utente di scrivere */
+    data = Serial.readString();
+    sscanf(data, "%f/%f/%f/%f/%f/%f/%f/%f", &tempFanMinNoPeople, &tempFanMaxNoPeople, &tempLedMinNoPeople, &tempLedMaxNoPeople, &tempFanMinWithPeople, &tempFanMaxWithPeople, &tempLedMinWithPeople, &tempLedMaxWithPeople);
+  }
 } 
 
   
