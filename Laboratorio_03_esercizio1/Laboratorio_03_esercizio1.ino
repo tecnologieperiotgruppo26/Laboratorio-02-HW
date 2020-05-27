@@ -82,7 +82,7 @@ void setup() {
   while (!Serial);
   /* se non apri il monitor seriale, il programma non parte */
   Serial.println("Lab 2 Starting");
-  
+  Serial.begin(9600);
 }
 
 void loop() {
