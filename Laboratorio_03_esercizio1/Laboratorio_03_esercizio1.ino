@@ -8,7 +8,6 @@
 
 #include <math.h>
 #include <LiquidCrystal_PCF8574.h>
-#include <string.h>
 
 /**
  * set di temperature, 4 valori per presenza di persone 
@@ -41,7 +40,7 @@ const int fanPin = 10;
 float currentSpeed = 0;
 float ledPower = 0;
 
-const int pirPin = 7;
+const int soundPin = 7;
 const unsigned long timeoutPir = 1800000;         /* timeout pir, circa 30 minuto 1800 secondi */
 volatile unsigned long checkTimePir = 0;
 unsigned long currentMillis;
@@ -51,7 +50,7 @@ unsigned long currentMillis;
  */
 int flag = 0;
 
-const int soundPin = 3;
+const int pirPin = 3;
 const unsigned long soundInterval = 600000;      /* 10 minuti in millis */
 const unsigned long timeoutSound = 2400000;      /* 40 minuti timeout */
 volatile unsigned long checkTimeSound = 0;
@@ -69,10 +68,11 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   analogWrite(fanPin, currentSpeed);
 
-  pinMode(pirPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(pirPin), checkPresence, CHANGE);
+  pinMode(soundPin, INPUT);
 
-  pinMode(soundPin, OUTPUT);
+  pinMode(pirPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(soundPin), checkSound, FALLING);
+
 
   lcd.begin(16, 2);
   lcd.setBacklight(255);
@@ -153,7 +153,7 @@ void loop() {
    */
   unsigned long delayMillis = millis();
   while (millis() - delayMillis <= sleepTime){
-    checkSound();
+    checkPresence();
     /**
      * magari il valore della funzione modulo è da rivedere
      * non so quanto vada veloce arduino, in caso è da trovare il giusto timing,
@@ -210,6 +210,7 @@ void checkSound(){
       }
       countSoundEvent++;
     }
+  
 }
 
 void lookLCD(){
@@ -258,14 +259,36 @@ void lookLCD(){
   I VALORI IN INPUT DEVONO ESSERE DIVISI DA /
  */
 void listenSerial(){
-  char data[46];
+  char data[8][4] = {};
+  char inByte[41] = {};
+
+  //esempio stringa 25.1/26.0/20.0/21.0/23.0/28.0/15.0/22.0
 
   if (Serial.available() > 0) {
-    int i, timeout = 60000; 
-    char* data;
+    int i, k=0, j, timeout = 60000;             /*idk se il serial available entra ci dovrebbe già essere la stringa quindi la prendo direttamente, anche senza TO in teoria*/
+    //inByte = Serial.readString();
     Serial.setTimeout(timeout); /* Timeout riferito alla lettura dell'input settato a 1 minuto per permettere all'utente di scrivere */
-    data = Serial.readString();
-    sscanf(data, "%f/%f/%f/%f/%f/%f/%f/%f", &tempFanMinNoPeople, &tempFanMaxNoPeople, &tempLedMinNoPeople, &tempLedMaxNoPeople, &tempFanMinWithPeople, &tempFanMaxWithPeople, &tempLedMinWithPeople, &tempLedMaxWithPeople);
+    
+    int availableBytes = Serial.available();
+    for(int i=0; i<availableBytes; i++){
+       inByte[i] = char(Serial.read());
+    }
+    
+    for (i=0 ; i<40 ; i=i+5){
+      for(j=0 ; j<4; j++){
+        data[k][j] = inByte[j+i];
+      }
+      k++;
+    }
+    tempFanMinNoPeople = atof(data[0]);
+    tempFanMaxNoPeople = atof(data[1]);
+    tempLedMinNoPeople = atof(data[2]);
+    tempLedMaxNoPeople = atof(data[3]);
+    tempFanMinWithPeople = atof(data[4]);
+    tempFanMaxWithPeople = atof(data[5]);
+    tempLedMinWithPeople = atof(data[6]);
+    tempLedMaxWithPeople = atof(data[7]);
+    
   }
 } 
 
