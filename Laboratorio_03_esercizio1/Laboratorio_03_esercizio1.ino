@@ -33,7 +33,7 @@ const int ledPin = 11;
 const int tempPin = A1;
 const long int R0 = 100000;
 const int beta = 4275;
-const int sleepTime = 10000;
+const int sleepTime = 5;
 
 const int fanPin = 10;
 /* Valore corrente speed da 0 a 255 */
@@ -50,7 +50,7 @@ unsigned long currentMillis;
  */
 int flag = 0;
 
-const int pirPin = 3;
+const int pirPin = 4;
 const unsigned long soundInterval = 600000;      /* 10 minuti in millis */
 const unsigned long timeoutSound = 2400000;      /* 40 minuti timeout */
 volatile unsigned long checkTimeSound = 0;
@@ -63,10 +63,13 @@ LiquidCrystal_PCF8574 lcd(0x27);
 /* Variabili per Finestra Mobile */
 const int TIME_INTERVAL = 10 + 1, EVENTS_NUM = 50;
 int soundEvents[TIME_INTERVAL];
-setupSoundEvents(soundEvents);
+
+int timeout = 60000;
+
 
 void setup() {
   /* Primo setup dei componenti */
+  Serial.println("SONO NEL SETUP!");
   pinMode(tempPin, INPUT);
   pinMode(fanPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
@@ -77,19 +80,23 @@ void setup() {
   pinMode(pirPin, INPUT);
   attachInterrupt(digitalPinToInterrupt(soundPin), checkSound, FALLING);
 
+  setupSoundEvents(soundEvents);
 
   lcd.begin(16, 2);
   lcd.setBacklight(255);
   lcd.home();
   lcd.clear();
   
-  while (!Serial);
+  //while (!Serial);
   /* E' necessario aprire il monitor altrimenti il programma non parte */
   Serial.begin(9600);
-  Serial.println("Lab 2 Starting");
+  Serial.print("Lab 2 Starting");
+  Serial.setTimeout(timeout); /* Timeout riferito alla lettura dell'input settato a 1 minuto per permettere all'utente di scrivere */
+  Serial.println("SONO NEL SETUP!");
 }
 
 void loop() {
+  
   if (flag==0){   
     tempFanMin = tempFanMinNoPeople;
     tempFanMax = tempFanMaxNoPeople;
@@ -131,45 +138,39 @@ void loop() {
     analogWrite(ledPin, ledPower);
   }
 
+  /**
+   *  Questo current millis indica il tempo trasorso dall'ultimo movimento
+   *  rilevato dal sensore PIR, ovvero dall'ultima volta che ho registrato 
+   *  il checkTimePir, se questo valore scade significa che non c'è nessuno.
+   */
+  
   currentMillis = millis();
   
   if (currentMillis - checkTimePir >= timeoutPir) {
     flag = 0;
   }
-  
-  if (currentMillis - checkTimeSound >= soundInterval ){
-    if (countSoundEvent > 50){
-      /*c'è una persona!*/
-      flag = 1;
-    }
-    else if (currentMillis - checkTimeSound >= timeoutSound){
-      flag = 0;
-    }
-    countSoundEvent = 0;
-  }
-
 
   /**
    * al posto della delay uitilizzo un ciclo while 
-   * in cui attento il passare del tempo e checko la presenza di suoni
-   * inoltre suddivido il tempo in multipli di 5 secondi per 
-   * il cambio schermata sull'LCD
+   * in cui attento il passare del tempo e checko la presenza di movimenti
+   * il ciclo while dura 5 secondi, prima di ogni ciclo vado a cambiare la pagina
+   * del LCD
    */
-  unsigned long delayMillis = millis();
-  while (millis() - delayMillis <= sleepTime){
-    checkPresence();
+  lookLCD();
+
+   
+  int delayMillis = int(millis()/1000);
+  while (int(millis()/1000) - delayMillis <= sleepTime){
+   /// checkPresence();
     /**
      * magari il valore della funzione modulo è da rivedere
      * non so quanto vada veloce arduino, in caso è da trovare il giusto timing,
      * magari il risultato minore di 10 o roba del genere
      */
-    if ((millis() - delayMillis)%5000 == 0){
-      lookLCD();
-    }
+ 
     if (Serial.available()){
       listenSerial();
     }
-  //delay(sleepTime);
   }
 }
 
@@ -183,6 +184,8 @@ float checkTemp(){
   float loga = log(R/R0)/beta;
   float TK = 1.0/((loga)+(1.0/298.15));
   float TC = TK-273.15;
+  Serial.print("TEMPERATURA RICEVUTA = ");
+  Serial.println(String(TC));
   return TC;
 }
 
@@ -210,21 +213,23 @@ void checkPresence(){
     checkTimePir = millis();
     Serial.println("Movimento rilevato!");
   }
-  else if(digitalRead(pirPin)==LOW){
-  }
 }
 
 void checkSound(){
   /* Implementazione Buffer Circolare */
-  int index, count, i, tail;
-  index = millis()%(TIME_INTERVAL*60*1000);
+  int index, count=0, i, tail;
+  
+  index = int(millis()/60000)%(TIME_INTERVAL);
   /* Metto a zero il successivo minuto */
   tail = (index + 1)%TIME_INTERVAL;
   soundEvents[tail] = 0;
   /* Aggiorno gli eventi della finestra corrente */
   if (digitalRead(soundPin)==LOW){
     soundEvents[index]++;
-    Serial.println("Souno ricevuto!");
+    delay(200);
+    Serial.println("Suono ricevuto!");
+    Serial.print("SOUND EVENTS NEL BLOCCO = ");
+    Serial.println(String(soundEvents[index]));
   }
   /* Controllo se nella finestra ci sono abbastanza eventi */
   for(i = 0; i < TIME_INTERVAL; i++) {
@@ -235,7 +240,7 @@ void checkSound(){
   } 
   else {
     flag = 0;
-  }
+  };
 }
 
 void lookLCD(){
@@ -243,6 +248,7 @@ void lookLCD(){
    * In base al setup corrente faccio la print della schermata 
    */
   if (setupLCD == 0){
+    lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("T=");
     lcd.print(String(temp));
@@ -254,8 +260,19 @@ void lookLCD(){
     lcd.print(" HT:");
     lcd.print(String(ledPower/2.55));
     setupLCD = 1;
+
+    Serial.print("T=");
+    Serial.print(String(temp));
+    Serial.print(" Pres:");
+    Serial.print(String(flag));
+    Serial.println("");
+    Serial.print("AC:");
+    Serial.print(String(currentSpeed/2.55));
+    Serial.print(" HT:");
+    Serial.print(String(ledPower/2.55));
   }
   else if(setupLCD == 1){
+    lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("AC m:");
     lcd.print(String(tempFanMin));
@@ -267,6 +284,17 @@ void lookLCD(){
     lcd.print(" M:");
     lcd.print(String(tempLedMax));
     setupLCD = 0;
+
+
+    Serial.print("AC m:");
+    Serial.print(String(tempFanMin));
+    Serial.print(" M:");
+    Serial.print(String(tempFanMax));
+    Serial.println("");
+    Serial.print("HT m:");
+    Serial.print(String(tempLedMin));
+    Serial.print(" M:");
+    Serial.print(String(tempLedMax));
   }
 }
 
@@ -290,9 +318,8 @@ void listenSerial(){
   //esempio stringa 25.1/26.0/20.0/21.0/23.0/28.0/15.0/22.0
 
   if (Serial.available() > 0) {
-    int i, k=0, j, timeout = 60000;             /*idk se il serial available entra ci dovrebbe già essere la stringa quindi la prendo direttamente, anche senza TO in teoria*/
+    int i, k=0, j;             /*idk se il serial available entra ci dovrebbe già essere la stringa quindi la prendo direttamente, anche senza TO in teoria*/
     //inByte = Serial.readString();
-    Serial.setTimeout(timeout); /* Timeout riferito alla lettura dell'input settato a 1 minuto per permettere all'utente di scrivere */
     
     int availableBytes = Serial.available();
     for(int i=0; i<availableBytes; i++){
@@ -313,7 +340,7 @@ void listenSerial(){
     tempFanMaxWithPeople = atof(data[5]);
     tempLedMinWithPeople = atof(data[6]);
     tempLedMaxWithPeople = atof(data[7]);
-    
+    Serial.println("SETUP DELLE TEMPERATURE AVVENUTO CON SUCCESSO");
   }
 } 
 
