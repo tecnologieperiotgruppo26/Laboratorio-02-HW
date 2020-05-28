@@ -60,6 +60,10 @@ int setupLCD = 0;
 LiquidCrystal_PCF8574 lcd(0x27);
 
 
+/* Variabili per Finestra Mobile */
+const int TIME_INTERVAL = 10 + 1, EVENTS_NUM = 50;
+int soundEvents[TIME_INTERVAL];
+setupSoundEvents(soundEvents);
 
 void setup() {
   /* Primo setup dei componenti */
@@ -193,24 +197,45 @@ float checkTemp(){
  * sull'interrupt
  */
  
+void setupSoundEvents(int vect[]) {
+  int i;
+  for (i = 0; i < TIME_INTERVAL; i++) {
+    vect[i] = 0;
+  }
+}
+
 void checkPresence(){
   if (digitalRead(pirPin)==HIGH){
     flag = 1;
     checkTimePir = millis();
-    Serial.print("movimento rilevato!");
+    Serial.println("Movimento rilevato!");
   }
   else if(digitalRead(pirPin)==LOW){
   }
 }
 
 void checkSound(){
-  if (digitalRead(soundPin) == LOW){
-      if (countSoundEvent == 0){
-        checkTimeSound = millis();
-      }
-      countSoundEvent++;
-    }
-  
+  /* Implementazione Buffer Circolare */
+  int index, count, i, tail;
+  index = millis()%(TIME_INTERVAL*60*1000);
+  /* Metto a zero il successivo minuto */
+  tail = (index + 1)%TIME_INTERVAL;
+  soundEvents[tail] = 0;
+  /* Aggiorno gli eventi della finestra corrente */
+  if (digitalRead(soundPin)==LOW){
+    soundEvents[index]++;
+    Serial.println("Souno ricevuto!");
+  }
+  /* Controllo se nella finestra ci sono abbastanza eventi */
+  for(i = 0; i < TIME_INTERVAL; i++) {
+    count += soundEvents[i];
+  }
+  if (count >= EVENTS_NUM) {
+    flag = 1;
+  } 
+  else {
+    flag = 0;
+  }
 }
 
 void lookLCD(){
