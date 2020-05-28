@@ -10,7 +10,7 @@
 #include <LiquidCrystal_PCF8574.h>
 
 /**
- * set di temperature, 4 valori per presenza di persone 
+ * Set di temperature, 4 valori per presenza di persone 
  * e 4 per l'assenza
  */
 float tempFanMinNoPeople = 25;
@@ -64,6 +64,7 @@ LiquidCrystal_PCF8574 lcd(0x27);
 const int TIME_INTERVAL = 10 + 1, EVENTS_NUM = 50;
 int soundEvents[TIME_INTERVAL];
 
+/* Variabili per LCD */
 int timeout = 60000;
 
 
@@ -87,8 +88,6 @@ void setup() {
   lcd.home();
   lcd.clear();
   
-  //while (!Serial);
-  /* E' necessario aprire il monitor altrimenti il programma non parte */
   Serial.begin(9600);
   Serial.print("Lab 2 Starting");
   Serial.setTimeout(timeout); /* Timeout riferito alla lettura dell'input settato a 1 minuto per permettere all'utente di scrivere */
@@ -96,7 +95,9 @@ void setup() {
 }
 
 void loop() {
-  
+  /**
+   * Settaggio parametri di temperatura
+  */
   if (flag==0){   
     tempFanMin = tempFanMinNoPeople;
     tempFanMax = tempFanMaxNoPeople;
@@ -127,7 +128,7 @@ void loop() {
     analogWrite(fanPin, currentSpeed);
   }
   /**
-   * controllo led
+   * Controllo led
    */
   if (temp < tempLedMax && temp > tempLedMin){
     ledPower = abs(temp-tempLedMin)*20.0/100*255.0;
@@ -145,29 +146,21 @@ void loop() {
    */
   
   currentMillis = millis();
-  
   if (currentMillis - checkTimePir >= timeoutPir) {
     flag = 0;
   }
 
   /**
-   * al posto della delay uitilizzo un ciclo while 
+   * Al posto della delay uitilizzo un ciclo while 
    * in cui attento il passare del tempo e checko la presenza di movimenti
    * il ciclo while dura 5 secondi, prima di ogni ciclo vado a cambiare la pagina
    * del LCD
    */
   lookLCD();
-
-   
+ 
   int delayMillis = int(millis()/1000);
   while (int(millis()/1000) - delayMillis <= sleepTime){
-   /// checkPresence();
-    /**
-     * magari il valore della funzione modulo è da rivedere
-     * non so quanto vada veloce arduino, in caso è da trovare il giusto timing,
-     * magari il risultato minore di 10 o roba del genere
-     */
- 
+    checkPresence(); 
     if (Serial.available()){
       listenSerial();
     }
@@ -176,9 +169,11 @@ void loop() {
 
 float checkTemp(){
   int vDigit = analogRead(tempPin);
-  //calcolo il valore di R, successivamente
-  //uso il datasheet per ricavare le formule di conversione e 
-  //calcolo T, per poi convertire in Celsius
+  /**
+   * Calcolo il valore di R, successivamente
+   * uso il datasheet per ricavare le formule di conversione e 
+   * calcolo T, per poi convertire in Celsius
+  */
   float R = ((1023.0/vDigit)-1.0);
   R = R0*R;
   float loga = log(R/R0)/beta;
@@ -244,7 +239,7 @@ void checkSound(){
 }
 
 void lookLCD(){
-  /**
+  /*
    * In base al setup corrente faccio la print della schermata 
    */
   if (setupLCD == 0){
@@ -318,8 +313,8 @@ void listenSerial(){
   //esempio stringa 25.1/26.0/20.0/21.0/23.0/28.0/15.0/22.0
 
   if (Serial.available() > 0) {
-    int i, k=0, j;             /*idk se il serial available entra ci dovrebbe già essere la stringa quindi la prendo direttamente, anche senza TO in teoria*/
-    //inByte = Serial.readString();
+    int i, k = 0, j;
+
     
     int availableBytes = Serial.available();
     for(int i=0; i<availableBytes; i++){
