@@ -116,7 +116,7 @@ void loop() {
    * Controllo ventilatore
    */
   if (temp < tempFanMax && temp > tempFanMin){
-    currentSpeed = (temp-tempFanMin)*20.0/100*255.0;
+    currentSpeed = (temp-tempFanMin)/(tempFanMax-tempFanMin)*255.0;
     analogWrite(fanPin, currentSpeed);
     Serial.print("Temperatura :");
     Serial.print(temp);
@@ -131,7 +131,7 @@ void loop() {
    * Controllo led
    */
   if (temp < tempLedMax && temp > tempLedMin){
-    ledPower = abs(temp-tempLedMin)*20.0/100*255.0;
+    ledPower = abs(temp-tempLedMax)/abs(tempLedMin-tempLedMax)*255.0;
     analogWrite(ledPin, ledPower);
   }
   else {
