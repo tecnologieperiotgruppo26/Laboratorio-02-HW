@@ -70,7 +70,6 @@ int timeout = 60000;
 
 void setup() {
   /* Primo setup dei componenti */
-  Serial.println("SONO NEL SETUP!");
   pinMode(tempPin, INPUT);
   pinMode(fanPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
@@ -91,7 +90,6 @@ void setup() {
   Serial.begin(9600);
   Serial.print("Lab 2 Starting");
   Serial.setTimeout(timeout); /* Timeout riferito alla lettura dell'input settato a 1 minuto per permettere all'utente di scrivere */
-  Serial.println("SONO NEL SETUP!");
 }
 
 void loop() {
