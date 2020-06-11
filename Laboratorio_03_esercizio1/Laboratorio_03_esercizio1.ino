@@ -46,7 +46,7 @@ volatile unsigned long checkTimePir = 0;
 unsigned long currentMillis;
 
 /**
- * QUESTO FLAG INDICA LA PRESENZA DI PERSONE, 0 ASSENZA E 1 PRESENZA
+ * QUESTO FLAG INDICA LA PRESENZA DI PERSONE, 0 ASSENZA E 1 PRESENZA (sensor fusion, slide 03, pag +-70)
  */
 int flag = 0;
 
